@@ -1,5 +1,5 @@
-extern crate base64;
-extern crate crypto;
+#![deny(missing_docs)]
+//! This module could be used to encrypt/decrypt tokens
 
 use crypto::aead::{AeadDecryptor, AeadEncryptor};
 use crypto::aes;
@@ -13,10 +13,21 @@ use std::fmt;
 const NONCE_LEN: u8 = 12;
 const TAG_LEN: u8 = 16;
 
+/// EncryptV3 encrypts the given content using the supplied key.
+///
+/// ```
+/// let input = "ec_expire=1257642471&ec_secure=33";
+///
+/// let encrypted = ectoken::encrypt_v3("testkey123", input);
+/// println!("{}", encrypted);
+/// # let decrypted = ectoken::decrypt_v3("testkey123", &encrypted).unwrap();
+///
+/// # assert_eq!(input, decrypted);
+/// ```
 pub fn encrypt_v3(key: &str, token: &str) -> String {
     let key_hash = key_hash(key);
     let mut nonce = [0u8; NONCE_LEN as usize];
-    
+
     let mut generator = rand::thread_rng();
 
     generator.fill_bytes(&mut nonce);
@@ -47,16 +58,25 @@ fn key_hash(key: &str) -> Vec<u8> {
     key_hash
 }
 
+/// Decrypts the given token using the supplied key. On success,
+/// returns the decrypted content. If the token is invalid or
+/// can not be decrypted, returns DecryptionError.
+///
+/// ```
+/// let decrypted = ectoken::decrypt_v3("testkey123", "bs4W7wyy0OjyBQMhAaahSVo2sG4gKEzuOegBf9kI-ZzG8Gz4FQuFud2ndvmuXkReeRnKFYXTJ7q5ynniGw").unwrap();
+///
+/// assert_eq!("ec_expire=1257642471&ec_secure=33", decrypted);
+/// ```
 pub fn decrypt_v3(key: &str, token: &str) -> Result<String, DecryptionError> {
     let chars = base64::decode_config(token, base64::URL_SAFE_NO_PAD)?;
-    
+
     if chars.len() < (NONCE_LEN + TAG_LEN) as usize {
         return Err(DecryptionError::IOError("invalid input length"));
     }
 
     let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &key_hash(key), &chars[..NONCE_LEN as usize], &[]);
     let mut output = vec![0u8; chars.len() - (NONCE_LEN + TAG_LEN) as usize];
-    
+
     if ! crypto.decrypt(&chars[NONCE_LEN as usize..chars.len() - TAG_LEN as usize], &mut output, &chars[chars.len() - TAG_LEN as usize..]) {
         return Err(DecryptionError::IOError("decryption failed"));
     }
@@ -133,22 +153,5 @@ mod tests {
         let decrypted = decrypt_v3("testkey123", "bs4W7wyy");
 
         assert!(decrypted.is_err(), "decryption should be an Error with invalid length encoded string");
-    }
-
-    #[test]
-    fn it_decrypt_as_expected() {
-        let decrypted = decrypt_v3("testkey123", "bs4W7wyy0OjyBQMhAaahSVo2sG4gKEzuOegBf9kI-ZzG8Gz4FQuFud2ndvmuXkReeRnKFYXTJ7q5ynniGw").unwrap();
- 
-        assert_eq!("ec_expire=1257642471&ec_secure=33", decrypted);
-    }
-
-    #[test]
-    fn it_encrypt_and_decrypt_successfully() {
-        let input = "ec_expire=1257642471&ec_secure=33";
-
-        let encrypted = encrypt_v3("testkey123", input);
-        let decrypted = decrypt_v3("testkey123", &encrypted).unwrap();
-
-        assert_eq!(input, decrypted);
     }
 }
