@@ -4,7 +4,10 @@ version = "0.1.0"
 authors = ["Benoît Burnichon <bburnichon@gmail.com>"]
 edition = "2018"
 description = "Token Generator for Edgecast Token-Based Authentication from Verizon Digital Media Services"
-license = "MIT or Apache-2.0"
+license = "MIT/Apache-2.0"
+homepage = "https://github.com/deezer/rust-ectoken"
+repository = "https://github.com/deezer/rust-ectoken"
+readme = "README.md"
 
 [dependencies]
 base64 = "^0.10"
