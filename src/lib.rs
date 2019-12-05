@@ -116,7 +116,7 @@ impl error::Error for DecryptionError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             DecryptionError::InvalidBase64(ref previous) => Some(previous),
             DecryptionError::InvalidUTF8(ref previous) => Some(previous),
