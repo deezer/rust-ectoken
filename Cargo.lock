@@ -20,7 +20,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "ectoken"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,6 +1,6 @@
 [package]
 name = "ectoken"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Benoît Burnichon <bburnichon@gmail.com>"]
 edition = "2018"
 description = "Token Generator for Edgecast Token-Based Authentication from Verizon Digital Media Services"
