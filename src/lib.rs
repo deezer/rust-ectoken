@@ -21,9 +21,14 @@ pub struct Ec3Key(pub [u8; 32]);
 impl Ec3Key {
     /// Create a new key that could be used for encryption/decryption afterwards
     pub fn new(key: &str) -> Self {
+        Self::new_raw(key.as_bytes())
+    }
+
+    /// Create a new key from raw string
+    pub fn new_raw(key: &[u8]) -> Self {
         let mut hasher = Sha256::new();
 
-        hasher.input_str(key);
+        hasher.input(key);
 
         let mut key_hash = [0u8; KEY_LEN];
         hasher.result(&mut key_hash);
