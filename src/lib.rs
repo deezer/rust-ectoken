@@ -10,8 +10,69 @@ use rand::RngCore;
 use std::error;
 use std::fmt;
 
-const NONCE_LEN: u8 = 12;
-const TAG_LEN: u8 = 16;
+const NONCE_LEN: usize = 12;
+const TAG_LEN: usize = 16;
+const KEY_LEN: usize = 32;
+
+/// Real derived key
+#[derive(Clone, PartialEq)]
+pub struct Ec3Key(pub [u8; 32]);
+
+impl Ec3Key {
+    /// Create a new key that could be used for encryption/decryption afterwards
+    pub fn new(key: &str) -> Self {
+        let mut hasher = Sha256::new();
+
+        hasher.input_str(key);
+
+        let mut key_hash = [0u8; KEY_LEN];
+        hasher.result(&mut key_hash);
+
+        Self(key_hash)
+    }
+
+    /// Encrypts token with key
+    pub fn encrypt(&self, token: &str) -> String {
+        let mut nonce = [0u8; NONCE_LEN];
+        let mut generator = rand::thread_rng();
+
+        generator.fill_bytes(&mut nonce);
+
+        let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &self.0, &nonce, &[]);
+        let mut output = vec![0u8; token.len()];
+        let mut tag = [0u8; TAG_LEN];
+
+        crypto.encrypt(token.as_bytes(), &mut output, &mut tag);
+
+        let mut encrypted = Vec::with_capacity(NONCE_LEN + token.len() + TAG_LEN);
+
+        encrypted.extend_from_slice(&nonce);
+        encrypted.extend_from_slice(&output);
+        encrypted.extend_from_slice(&tag);
+
+        base64::encode_config(&encrypted, base64::URL_SAFE_NO_PAD)
+    }
+
+    /// Decrypt given token with already derived key
+    pub fn decrypt(&self, token: &str) -> Result<String, DecryptionError> {
+        let chars = base64::decode_config(token, base64::URL_SAFE_NO_PAD)?;
+
+        if chars.len() < (NONCE_LEN + TAG_LEN) as usize {
+            return Err(DecryptionError::IOError("invalid input length"));
+        }
+
+        let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &self.0, &chars[..NONCE_LEN], &[]);
+        let mut output = vec![0u8; chars.len() - (NONCE_LEN + TAG_LEN)];
+
+        if ! crypto.decrypt(&chars[NONCE_LEN as usize..chars.len() - TAG_LEN], &mut output, &chars[chars.len() - TAG_LEN..]) {
+            return Err(DecryptionError::IOError("decryption failed"));
+        }
+
+        let s = String::from_utf8(output)?;
+
+        Ok(s)
+    }
+}
 
 /// EncryptV3 encrypts the given content using the supplied key.
 ///
@@ -25,37 +86,9 @@ const TAG_LEN: u8 = 16;
 /// # assert_eq!(input, decrypted);
 /// ```
 pub fn encrypt_v3(key: &str, token: &str) -> String {
-    let key_hash = key_hash(key);
-    let mut nonce = [0u8; NONCE_LEN as usize];
+    let key = Ec3Key::new(key);
 
-    let mut generator = rand::thread_rng();
-
-    generator.fill_bytes(&mut nonce);
-
-    let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &key_hash, &nonce, &[]);
-    let mut output = vec![0u8; token.len()];
-    let mut tag = [0u8; TAG_LEN as usize];
-
-    crypto.encrypt(token.as_bytes(), &mut output, &mut tag);
-
-    let mut encrypted = Vec::with_capacity(NONCE_LEN as usize + token.len() + TAG_LEN as usize);
-
-    encrypted.extend_from_slice(&nonce);
-    encrypted.extend_from_slice(&output);
-    encrypted.extend_from_slice(&tag);
-
-    base64::encode_config(&encrypted, base64::URL_SAFE_NO_PAD)
-}
-
-fn key_hash(key: &str) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-
-    hasher.input_str(key);
-
-    let mut key_hash = vec![0u8; hasher.output_bytes()];
-    hasher.result(&mut key_hash);
-
-    key_hash
+    key.encrypt(token)
 }
 
 /// Decrypts the given token using the supplied key. On success,
@@ -68,22 +101,9 @@ fn key_hash(key: &str) -> Vec<u8> {
 /// assert_eq!("ec_expire=1257642471&ec_secure=33", decrypted);
 /// ```
 pub fn decrypt_v3(key: &str, token: &str) -> Result<String, DecryptionError> {
-    let chars = base64::decode_config(token, base64::URL_SAFE_NO_PAD)?;
+    let key = Ec3Key::new(key);
 
-    if chars.len() < (NONCE_LEN + TAG_LEN) as usize {
-        return Err(DecryptionError::IOError("invalid input length"));
-    }
-
-    let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &key_hash(key), &chars[..NONCE_LEN as usize], &[]);
-    let mut output = vec![0u8; chars.len() - (NONCE_LEN + TAG_LEN) as usize];
-
-    if ! crypto.decrypt(&chars[NONCE_LEN as usize..chars.len() - TAG_LEN as usize], &mut output, &chars[chars.len() - TAG_LEN as usize..]) {
-        return Err(DecryptionError::IOError("decryption failed"));
-    }
-
-    let s = String::from_utf8(output)?;
-
-    Ok(s)
+    key.decrypt(token)
 }
 
 /// Errors that can occur while decoding.
