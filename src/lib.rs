@@ -15,7 +15,8 @@ const TAG_LEN: usize = 16;
 const KEY_LEN: usize = 32;
 
 /// Real derived key
-pub struct Ec3Key([u8; 32]);
+#[derive(Clone, PartialEq)]
+pub struct Ec3Key(pub [u8; 32]);
 
 impl Ec3Key {
     /// Create a new key that could be used for encryption/decryption afterwards
