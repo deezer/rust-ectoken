@@ -10,6 +10,6 @@ repository = "https://github.com/deezer/rust-ectoken"
 readme = "README.md"
 
 [dependencies]
-base64 = "^0.11"
+base64 = "^0.12"
 rand = "^0.7" 
 rust-crypto = "^0.2"
