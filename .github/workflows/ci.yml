@@ -55,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run fmt check
-        uses: actions-rs/cargo:v1
+        uses: actions-rs/cargo@v1
         with:
           command: fmt
           toolchain: nightly
