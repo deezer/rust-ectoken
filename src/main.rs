@@ -1,4 +1,3 @@
-
 use std::env;
 use std::process;
 
@@ -21,10 +20,12 @@ fn main() {
 
     let result = match config.action.as_str() {
         "encrypt" => ectoken::encrypt_v3(config.key.as_str(), config.text.as_str()),
-        "decrypt" => ectoken::decrypt_v3(config.key.as_str(), config.text.as_str()).unwrap_or_else(|err| {
-            println!("error: {}", err);
-            process::exit(-1);
-        }),
+        "decrypt" => {
+            ectoken::decrypt_v3(config.key.as_str(), config.text.as_str()).unwrap_or_else(|err| {
+                println!("error: {}", err);
+                process::exit(-1);
+            })
+        }
         _ => {
             println!("Unknown action: it must be one of (encrypt or decrypt)");
             println!("{}", usage);
