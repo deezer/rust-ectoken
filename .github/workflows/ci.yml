@@ -45,7 +45,7 @@ jobs:
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
-          command: tests
+          command: test
           args: --all --verbose
         env:
           TARGET: ${{ matrix.target }}
