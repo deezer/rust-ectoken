@@ -1,7 +1,12 @@
 # rust-ectoken
+
+![CI](https://github.com/deezer/rust-ectoken/workflows/CI/badge.svg)
+[![crates.io](https://img.shields.io/crates/v/ectoken.svg)](https://crates.io/crates/ectoken)
+[![Docs](https://docs.rs/ectoken/badge.svg)](https://docs.rs/ec_token)
+
 Token Generator for Edgecast Token-Based Authentication from Verizon Digital Media Services
 
-Written against Rust 2018.
+Written against Rust 2018. (Minimum rustc version 1.34.0)
 
 To build and install the test utility, simply run `cargo build --release`
 
@@ -10,7 +15,7 @@ To use rust-ectoken, add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-rust-ectoken = "^0.1"
+ectoken = "^0.2"
 ```
 
 and the following to your crate root:
