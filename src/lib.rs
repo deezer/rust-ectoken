@@ -69,7 +69,11 @@ impl Ec3Key {
         let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &self.0, &chars[..NONCE_LEN], &[]);
         let mut output = vec![0u8; chars.len() - (NONCE_LEN + TAG_LEN)];
 
-        if ! crypto.decrypt(&chars[NONCE_LEN as usize..chars.len() - TAG_LEN], &mut output, &chars[chars.len() - TAG_LEN..]) {
+        if !crypto.decrypt(
+            &chars[NONCE_LEN as usize..chars.len() - TAG_LEN],
+            &mut output,
+            &chars[chars.len() - TAG_LEN..],
+        ) {
             return Err(DecryptionError::IOError("decryption failed"));
         }
 
@@ -127,7 +131,9 @@ impl fmt::Display for DecryptionError {
         match *self {
             DecryptionError::InvalidBase64(_) => write!(f, "Invalid base64."),
             DecryptionError::InvalidUTF8(_) => write!(f, "Invalid UTF8 string decrypted."),
-            DecryptionError::IOError(description) => write!(f, "Input/Output error: {}", description),
+            DecryptionError::IOError(description) => {
+                write!(f, "Input/Output error: {}", description)
+            }
         }
     }
 }
@@ -168,15 +174,24 @@ mod tests {
 
     #[test]
     fn it_returns_err_on_invalid_base64_string() {
-        let decrypted = decrypt_v3("testkey123", "af0c6acf7906cd500aee63a4dd2e97ddcb0142601cf83aa9d622289718c4c85413");
+        let decrypted = decrypt_v3(
+            "testkey123",
+            "af0c6acf7906cd500aee63a4dd2e97ddcb0142601cf83aa9d622289718c4c85413",
+        );
 
-        assert!(decrypted.is_err(), "decryption should be an Error with invalid base64 encoded string");
+        assert!(
+            decrypted.is_err(),
+            "decryption should be an Error with invalid base64 encoded string"
+        );
     }
 
     #[test]
     fn it_returns_err_on_invalid_length() {
         let decrypted = decrypt_v3("testkey123", "bs4W7wyy");
 
-        assert!(decrypted.is_err(), "decryption should be an Error with invalid length encoded string");
+        assert!(
+            decrypted.is_err(),
+            "decryption should be an Error with invalid length encoded string"
+        );
     }
 }
