@@ -1,22 +1,19 @@
 #![deny(missing_docs)]
 //! This module could be used to encrypt/decrypt tokens
 
-use crypto::aead::{AeadDecryptor, AeadEncryptor};
-use crypto::aes;
-use crypto::aes_gcm::AesGcm;
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
-use rand::RngCore;
+use aes_gcm::aead::{generic_array::typenum::U32, generic_array::GenericArray, Aead, NewAead};
+use aes_gcm::Aes256Gcm;
+use rand::Rng;
+use sha2::{Digest, Sha256};
 use std::error;
 use std::fmt;
 
 const NONCE_LEN: usize = 12;
 const TAG_LEN: usize = 16;
-const KEY_LEN: usize = 32;
 
 /// Real derived key
 #[derive(Clone, PartialEq)]
-pub struct Ec3Key(pub [u8; 32]);
+pub struct Ec3Key(pub GenericArray<u8, U32>);
 
 impl Ec3Key {
     /// Create a new key that could be used for encryption/decryption afterwards
@@ -27,58 +24,45 @@ impl Ec3Key {
     /// Create a new key from raw string
     pub fn new_raw(key: &[u8]) -> Self {
         let mut hasher = Sha256::new();
-
-        hasher.input(key);
-
-        let mut key_hash = [0u8; KEY_LEN];
-        hasher.result(&mut key_hash);
-
-        Self(key_hash)
+        hasher.update(key);
+        Self(hasher.finalize())
     }
 
     /// Encrypts token with key
     pub fn encrypt(&self, token: &str) -> String {
-        let mut nonce = [0u8; NONCE_LEN];
-        let mut generator = rand::thread_rng();
+        let nonce = rand::thread_rng().gen::<[u8; NONCE_LEN]>();
+        let nonce = GenericArray::from_slice(&nonce);
+        let cipher = Aes256Gcm::new(&self.0);
 
-        generator.fill_bytes(&mut nonce);
+        let mut ciphertext = cipher
+            .encrypt(nonce, token.as_bytes())
+            .expect("encryption failure!");
 
-        let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &self.0, &nonce, &[]);
-        let mut output = vec![0u8; token.len()];
-        let mut tag = [0u8; TAG_LEN];
-
-        crypto.encrypt(token.as_bytes(), &mut output, &mut tag);
-
-        let mut encrypted = Vec::with_capacity(NONCE_LEN + token.len() + TAG_LEN);
-
-        encrypted.extend_from_slice(&nonce);
-        encrypted.extend_from_slice(&output);
-        encrypted.extend_from_slice(&tag);
+        let mut encrypted: Vec<u8> = Vec::from(nonce.as_slice());
+        encrypted.append(&mut ciphertext);
 
         base64::encode_config(&encrypted, base64::URL_SAFE_NO_PAD)
     }
 
     /// Decrypt given token with already derived key
     pub fn decrypt(&self, token: &str) -> Result<String, DecryptionError> {
-        let chars = base64::decode_config(token, base64::URL_SAFE_NO_PAD)?;
+        let token = base64::decode_config(token, base64::URL_SAFE_NO_PAD)?;
 
-        if chars.len() < (NONCE_LEN + TAG_LEN) as usize {
+        if token.len() < (NONCE_LEN + TAG_LEN) as usize {
             return Err(DecryptionError::IOError("invalid input length"));
         }
 
-        let mut crypto = AesGcm::new(aes::KeySize::KeySize256, &self.0, &chars[..NONCE_LEN], &[]);
-        let mut output = vec![0u8; chars.len() - (NONCE_LEN + TAG_LEN)];
+        let cipher = Aes256Gcm::new(&self.0);
+        let nonce = GenericArray::from_slice(&token[0..NONCE_LEN]);
 
-        if !crypto.decrypt(
-            &chars[NONCE_LEN as usize..chars.len() - TAG_LEN],
-            &mut output,
-            &chars[chars.len() - TAG_LEN..],
-        ) {
-            return Err(DecryptionError::IOError("decryption failed"));
-        }
+        let ciphertext = &token[NONCE_LEN..];
 
-        let s = String::from_utf8(output)?;
+        let plaintext = match cipher.decrypt(nonce, ciphertext) {
+            Ok(text) => text,
+            Err(_) => return Err(DecryptionError::IOError("decryption failed")),
+        };
 
+        let s = String::from_utf8(plaintext)?;
         Ok(s)
     }
 }
@@ -171,6 +155,14 @@ impl From<std::string::FromUtf8Error> for DecryptionError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn it_decodes_properly() {
+        let key = "mykey";
+        let msg = "hello world";
+        let encrypted = encrypt_v3(&key, &msg);
+        assert_eq!(msg, decrypt_v3(&key, &encrypted).expect("decrypt failed"));
+    }
 
     #[test]
     fn it_returns_err_on_invalid_base64_string() {
