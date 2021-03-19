@@ -1,5 +1,9 @@
 # rust-ectoken
 
+This repository contains code prior maintenance was handed to Verizon Digital
+
+Please refer to https://github.com/VerizonDigital/rust-ectoken starting from `0.3`
+
 ![CI](https://github.com/deezer/rust-ectoken/workflows/CI/badge.svg)
 [![crates.io](https://img.shields.io/crates/v/ectoken.svg)](https://crates.io/crates/ectoken)
 [![Docs](https://docs.rs/ectoken/badge.svg)](https://docs.rs/ec_token)
