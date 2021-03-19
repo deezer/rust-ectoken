@@ -6,7 +6,7 @@
 
 Token Generator for Edgecast Token-Based Authentication from Verizon Digital Media Services
 
-Written against Rust 2018. (Minimum rustc version 1.34.0)
+Written against Rust 2018. (Minimum rustc version 1.41.0)
 
 To build and install the test utility, simply run `cargo build --release`
 
@@ -15,7 +15,7 @@ To use rust-ectoken, add the following to your Cargo.toml:
 
 ```toml
 [dependencies]
-ectoken = "^0.2"
+ectoken = "^0.3"
 ```
 
 and the following to your crate root:
