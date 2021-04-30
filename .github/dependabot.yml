@@ -1,0 +1,19 @@
+version: 2
+updates:
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "04:00"
+  open-pull-requests-limit: 10
+  assignees:
+  - bburnichon
+  labels:
+  - dependencies
+  ignore:
+  - dependency-name: rand
+    versions:
+    - 0.8.3
+  - dependency-name: base64
+    versions:
+    - 0.13.0
